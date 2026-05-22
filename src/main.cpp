@@ -7,19 +7,24 @@ void setup(){
 
 
 }
-void loop()
-{
-  for(int i=0;i<255;i++){
-    ledcWrite(0,i);
-    delay(200);
-    
-  }
-  delay(100);
-  for(int i=255;i>=0;i--){
-    ledcWrite(0,i);
-    delay(200);  
-  }
-  delay(500);
+void loop(){
   
+  for (int k=0;k<3;k++)
+  {
+    for(int i=0;i<255;i++){
+      ledcWrite(0,i);
+      delay(10);
+      
+    }
+    delay(100);
+    for(int i=255;i>=0;i--){
+      ledcWrite(0,i);
+      delay(10);  
+    }
+    
+    
 
+  }
+  while(true);
+  
 }
