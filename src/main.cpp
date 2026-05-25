@@ -7,7 +7,20 @@ void setup(){
 void loop(){
   if (Serial.available()){
      String incoming = Serial.readStringUntil('\n');
-     Serial.println(incoming);
+     incoming.trim();
+     if (incoming == "FORWARD"){
+        Serial.println("Moving Forward...");
+     }
+     else if (incoming == "STOP" ){
+      Serial.println("Stopping.");
+     }
+     else if (incoming == "STATUS"){
+      Serial.println("All systems nominal.");
+     }
+     else{
+      Serial.println("Unknown command:" + incoming);
+     }
+     
   }
   
 
