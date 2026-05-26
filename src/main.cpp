@@ -1,38 +1,32 @@
 #include <Arduino.h>
-#define TRIG_PIN 5
-#define ECHO_PIN 18
-
+#define LEFT_IR 35
+#define RIGHT_IR 34
 
 
 void setup(){
   Serial.begin(115200);
-  pinMode(TRIG_PIN,OUTPUT);
-  pinMode(ECHO_PIN,INPUT);
+  
   pinMode(LEFT_IR,INPUT);
   pinMode(RIGHT_IR,INPUT);
   
 }
+
+
 void loop(){
-  //for screaming
-  digitalWrite(TRIG_PIN,LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG_PIN,HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG_PIN,LOW);
-  //for hearing the echo
-  long duration = pulseIn(ECHO_PIN,HIGH);
-  float distance = (duration*0.034)/2;
-  if (distance<20){
-    Serial.println("OBSTACLE DETECTED!!");
-  
+  int LEFT = digitalRead(LEFT_IR);
+  int RIGHT = digitalRead(RIGHT_IR);
+  if (LEFT == 0 && RIGHT == 0){
+    Serial.println("ALL CLEAR");
+
+  }
+  else if (LEFT == 1 && RIGHT == 0){
+    Serial.println("LEFT CLIFF DETECTED");
+  }
+  else if (LEFT == 0 && RIGHT == 1){
+    Serial.println("RIGHT CLIFF DETECTED");
   }
   else{
-    Serial.print("DISTANCE: ");
-    Serial.print(distance);
-    Serial.println("CM");
+    Serial.println("BOTH CLIFFS DETECTED, STOP.");
   }
-  delay(500);
-  
-
+  delay(200);
 }
-
