@@ -1,61 +1,26 @@
 #include <Arduino.h>
-#define LEFT_IR 35
-#define RIGHT_IR 34
-#define TRIG_PIN 5
-#define ECHO_PIN 18
+#include <TFT_eSPI.h>
+TFT_eSPI tft = TFT_eSPI();
 
 void setup(){
-  Serial.begin(115200);
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(TFT_BLACK);
   
-  pinMode(LEFT_IR,INPUT);
-  pinMode(RIGHT_IR,INPUT);
-  pinMode(TRIG_PIN,OUTPUT);
-  pinMode(ECHO_PIN,INPUT);
-}
-
-
-void CHECK_CLIFF(){
-  int LEFT = digitalRead(LEFT_IR);
-  int RIGHT = digitalRead(RIGHT_IR);
-  if (LEFT == 0 && RIGHT == 0){
-    Serial.println("ALL CLEAR");
-
-  }
-  else if (LEFT == 1 && RIGHT == 0){
-    Serial.println("LEFT CLIFF DETECTED");
-  }
-  else if (LEFT == 0 && RIGHT == 1){
-    Serial.println("RIGHT CLIFF DETECTED");
-  }
-  else{
-    Serial.println("BOTH CLIFFS DETECTED, STOP.");
-  }
-  
-}
-void CHECK_OBSTACLE(){
-  digitalWrite(TRIG_PIN,LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG_PIN,HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG_PIN,LOW);
-
-  long duration = pulseIn(ECHO_PIN,HIGH);
-  float distance = duration*0.034/2;
-  if (distance<10){
-    Serial.println("OBSTACLE DETECTED!");
-
-  }
-  else{
-    Serial.print("Distance : ");
-    Serial.print(distance);
-    Serial.println(" CM");
-    
-  }
-  
+  tft.setTextColor(TFT_YELLOW);
+  tft.setTextSize(3);
+  tft.drawString("HELLO ROBOT",20,20);
 }
 void loop(){
-  CHECK_OBSTACLE();
-  CHECK_CLIFF();
-  delay(300);
-
+    tft.fillCircle(60,160,30,TFT_RED);
+    tft.drawRect(20,110,80,100,TFT_WHITE);
+    tft.fillCircle(180,160,30,TFT_RED);
+    tft.drawRect(140,110,80,100,TFT_WHITE);
+    delay(1000);
+    tft.fillCircle(60,160,30,TFT_BLACK);
+    tft.drawRect(20,110,80,100,TFT_WHITE);
+    tft.fillCircle(180,160,30,TFT_BLACK);
+    tft.drawRect(140,110,80,100,TFT_WHITE);
+    delay(1000);
 }
