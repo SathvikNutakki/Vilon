@@ -1,26 +1,31 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-TFT_eSPI tft = TFT_eSPI();
+#include <DHT.h>
 
-void setup(){
+TFT_eSPI tft = TFT_eSPI();
+DHT dht(13,DHT22);
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
   tft.init();
   tft.setRotation(1);
+  tft.setCursor(0,0);
   tft.fillScreen(TFT_BLACK);
-  tft.fillScreen(TFT_BLACK);
+  dht.begin();
+
   
-  tft.setTextColor(TFT_YELLOW);
-  tft.setTextSize(3);
-  tft.drawString("HELLO ROBOT",20,20);
 }
-void loop(){
-    tft.fillCircle(60,160,30,TFT_RED);
-    tft.drawRect(20,110,80,100,TFT_WHITE);
-    tft.fillCircle(180,160,30,TFT_RED);
-    tft.drawRect(140,110,80,100,TFT_WHITE);
-    delay(1000);
-    tft.fillCircle(60,160,30,TFT_BLACK);
-    tft.drawRect(20,110,80,100,TFT_WHITE);
-    tft.fillCircle(180,160,30,TFT_BLACK);
-    tft.drawRect(140,110,80,100,TFT_WHITE);
-    delay(1000);
+
+void loop() {
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(3);
+  tft.drawString("TEMP :",20,10);
+  tft.drawString(String(temp) + " C",20,50);
+  tft.drawString("HUMIDITY: ",20,110);
+  tft.drawString(String(hum) + " %",20,150);
+  delay(2000);
 }
