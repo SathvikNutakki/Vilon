@@ -2,25 +2,28 @@
 #include <TFT_eSPI.h>
 #include <DHT.h>
 #include <ESP32Servo.h>
+#include "HarveyFace.h"
 
 #define DHTPIN 13
 #define TRIG_PIN 5
-#define ECHO_PIN 16       
+#define ECHO_PIN 16
 #define IR_RIGHT 34
-#define IR_LEFT  35
+#define IR_LEFT 35
 #define BTN_A 27
 #define BTN_B 14
+#define VC02_RX 17
+#define VC02_TX 21
 
-
+String lastVC02Command = "...";
 TFT_eSPI tft = TFT_eSPI();
-DHT dht(13, DHT22);
+HarveyFace harvey(tft);
+DHT dht(DHTPIN, DHT22);
 Servo LServo;
 Servo RServo;
+HardwareSerial VC02(2);
 
-
-unsigned long lastDisplayTime = 0;
-unsigned long lastServoTime   = 0;
-int servoState = 0;
+unsigned long lastSensorSerialMs = 0;
+unsigned long lastSerialExprMs = 0;
 
 long getDistance() {
   digitalWrite(TRIG_PIN, LOW);
@@ -28,8 +31,62 @@ long getDistance() {
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
-  long duration = pulseIn(ECHO_PIN, HIGH);
-  return duration * 0.034 / 2;
+  long duration = pulseIn(ECHO_PIN, HIGH, 25000);
+  if (duration <= 0) return -1;
+  return (long)(duration * 0.034 / 2);
+}
+
+void pollVC02() {
+  while (VC02.available()) {
+    String line = VC02.readStringUntil('\n');
+    line.trim();
+    if (line.length() == 0) continue;
+    lastVC02Command = line;
+    harvey.setExpressionFromCommand(line);
+    Serial.printf("VC02: %s -> expr %u\n", line.c_str(), (unsigned)harvey.currentExpression());
+  }
+}
+
+// Send a VC02 command name over USB serial to preview a face, e.g. "MoveForward" or "Scare".
+void pollSerialExpressions() {
+  if (!Serial.available()) return;
+  if (millis() - lastSerialExprMs < 120) return;
+
+  String line = Serial.readStringUntil('\n');
+  line.trim();
+  if (line.length() == 0) return;
+
+  lastSerialExprMs = millis();
+  lastVC02Command = line;
+  harvey.setExpressionFromCommand(line);
+  Serial.printf("Expression set from serial: %s\n", line.c_str());
+}
+
+void logSensorsToSerial() {
+  if (millis() - lastSensorSerialMs < 2000) return;
+  lastSensorSerialMs = millis();
+
+  float temp = dht.readTemperature();
+  float hum = dht.readHumidity();
+  long dist = getDistance();
+  Serial.printf("temp=%.1f hum=%.1f dist=%ld irL=%d irR=%d\n", temp, hum, dist, digitalRead(IR_LEFT),
+                digitalRead(IR_RIGHT));
+}
+
+void moveservos() {
+  bool btnA = digitalRead(BTN_A) == LOW;
+  bool btnB = digitalRead(BTN_B) == LOW;
+
+  if (btnA) {
+    LServo.writeMicroseconds(1000);
+    RServo.writeMicroseconds(2000);
+  } else if (btnB) {
+    LServo.writeMicroseconds(2000);
+    RServo.writeMicroseconds(1000);
+  } else {
+    LServo.writeMicroseconds(1500);
+    RServo.writeMicroseconds(1500);
+  }
 }
 
 void setup() {
@@ -43,55 +100,26 @@ void setup() {
   dht.begin();
 
   tft.init();
-  tft.setRotation(2);
+  tft.setRotation(1);
   tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setTextSize(2);
-  tft.writecommand(0x36);
-  tft.writedata(0xC0);
+  // If colors look wrong or image is inverted, try ONE of these:
+  // tft.invertDisplay(true);
+  // tft.setSwapBytes(true);
+
+  harvey.begin();
+  harvey.setExpression(HarveyExpr::Idle, true);
 
   LServo.attach(25);
   RServo.attach(26);
+  VC02.begin(9600, SERIAL_8N1, VC02_RX, VC02_TX);
 
-  
-}
-
-void sensorvaluesdisplay() {
-  if (millis() - lastDisplayTime < 500) return;  
-  lastDisplayTime = millis();
-
-  float temp = dht.readTemperature();
-  float hum  = dht.readHumidity();
-  long  dist = getDistance();
-  bool  irR  = digitalRead(IR_RIGHT);
-  bool  irL  = digitalRead(IR_LEFT);
-
-  tft.fillScreen(TFT_BLACK);
-  tft.setCursor(10, 10);
-  tft.printf("Temp: %.1fC\n", temp);
-  tft.printf(" Hum:  %.1f%%\n", hum);
-  tft.printf(" Dist: %ld cm\n", dist);
-  tft.printf(" IR R: %s\n", irR ? "EDGE!" : "ok");
-  tft.printf(" IR L: %s\n", irL ? "EDGE!" : "ok");
-}
-
-void moveservos() {
-  bool btnA = digitalRead(BTN_A) == LOW;
-  bool btnB = digitalRead(BTN_B) == LOW;
-
-  if (btnA) {
-    LServo.writeMicroseconds(1000);
-    RServo.writeMicroseconds(1000);
-  } else if (btnB) {
-    LServo.writeMicroseconds(2000);
-    RServo.writeMicroseconds(2000);
-  } else {
-    LServo.writeMicroseconds(1500);
-    RServo.writeMicroseconds(1500);
-  }
+  Serial.println("Harvey face ready. Send MoveForward, Scare, GoToSleep, etc. on serial to test.");
 }
 
 void loop() {
-  sensorvaluesdisplay();
+  pollVC02();
+  pollSerialExpressions();
+  harvey.update();
+  logSensorsToSerial();
   moveservos();
 }
