@@ -2,56 +2,62 @@
 #include <TFT_eSPI.h>
 #include <DHT.h>
 
+#define DHTPIN 13
+#define DHTTYPE DHT22
+#define TRIG_PIN 5
+#define ECHO_PIN 16        // updated from 18 cuz 18 is already being used for tft display
+#define IR_RIGHT 34
+#define IR_LEFT  35
+
 TFT_eSPI tft = TFT_eSPI();
-DHT dht(13, DHT22);
+DHT dht(DHTPIN, DHTTYPE);
+
+long getDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH);
+  return duration * 0.034 / 2;
+}
 
 void setup() {
   Serial.begin(115200);
-  delay(500);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(IR_RIGHT, INPUT);
+  pinMode(IR_LEFT, INPUT);
+  dht.begin();
 
   tft.init();
   tft.setRotation(2);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(10, 10);
   tft.writecommand(0x36);
   tft.writedata(0xC0);
-
-  // --- SCREEN TEST ---
-  // Full screen color fills
-  tft.fillScreen(TFT_RED);   delay(800);
-  tft.fillScreen(TFT_GREEN); delay(800);
-  tft.fillScreen(TFT_BLUE);  delay(800);
-
-  // Corner + center dots on black
-  tft.fillScreen(TFT_BLACK);
-  tft.fillCircle(0,   0,   6, TFT_WHITE);   // top-left
-  tft.fillCircle(239, 0,   6, TFT_WHITE);   // top-right
-  tft.fillCircle(0,   319, 6, TFT_WHITE);   // bottom-left
-  tft.fillCircle(239, 319, 6, TFT_WHITE);   // bottom-right
-  tft.fillCircle(120, 160, 6, TFT_YELLOW);  // center
-
-  tft.setTextColor(TFT_WHITE);
-  tft.drawString("TOP-LEFT",    10,  10, 2);
-  tft.drawString("TOP-RIGHT",  140,  10, 2);
-  tft.drawString("BTM-LEFT",    10, 305, 2);
-  tft.drawString("BTM-RIGHT",  140, 305, 2);
-  tft.drawString("NOT MIRRORED?", 30, 150, 2);
-  delay(3000);
-  // --- END TEST ---
-
-  dht.begin();
-  tft.fillScreen(TFT_BLACK);
+  tft.println("Systems check...");
 }
 
 void loop() {
   float temp = dht.readTemperature();
   float hum  = dht.readHumidity();
+  long  dist = getDistance();
+  bool  irR  = digitalRead(IR_RIGHT);  // active high so setting it low. 
+  bool  irL  = digitalRead(IR_LEFT);
 
+  
+
+  // TFT output
   tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextSize(3);
-  tft.drawString("TEMP :",        20,  10);
-  tft.drawString(String(temp) + " C",  20,  50);
-  tft.drawString("HUMIDITY:",     20, 110);
-  tft.drawString(String(hum)  + " %",  20, 150);
+  tft.setCursor(10, 10);
+  tft.printf("Temp: %.1fC\n", temp);
+  tft.printf(" Hum:  %.1f%%\n", hum);
+  tft.printf(" Dist: %ld cm\n", dist);
+  tft.printf(" IR R: %s\n", irR ? "EDGE!" : "ok");
+  tft.printf(" IR L: %s\n", irL ? "EDGE!" : "ok");
 
-  delay(2000);
+  delay(500);
 }
