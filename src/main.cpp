@@ -33,6 +33,19 @@ long getDistance() {
   return duration * 0.034 / 2;
 }
 
+int currentVibeIndex = 0;
+bool lastBtnA_State = HIGH;
+bool lastBtnB_State = HIGH;
+
+const String vibeNames[30] = {
+  "IDLE", "BORED", "SUSPICIOUS", "AMUSED", "ANNOYED", 
+  "ANGRY", "FOCUSED", "CONFUSED", "SARCASTIC", "SMUG", 
+  "DISAPPOINTED", "INTIMIDATING", "SCANNING", "GLITCHING", "SURPRISED", 
+  "SLEEPY", "JUDGING", "IMPATIENT", "CALCULATING", "MISCHIEVOUS", 
+  "OVERHEATED", "LISTENING", "DISMISSIVE", "PLOTTING", "COCKY", 
+  "SHOCKED", "LOADING", "VICTORIOUS", "DEFENSIVE", "MENACING"
+};
+
 void setup() {
   Serial.begin(115200);
   pinMode(TRIG_PIN, OUTPUT);
@@ -93,14 +106,41 @@ void moveservos() {
   }
 }
 
+void expressionwithbuttongemini(){
+  
+  // Read physical input signals
+  bool btnA_State = digitalRead(BTN_A);
+  bool btnB_State = digitalRead(BTN_B);
+
+  // Button A Clicked -> Next Expression
+  if (btnA_State == LOW && lastBtnA_State == HIGH) {
+    currentVibeIndex = (currentVibeIndex + 1) % 30;
+    specter.setVibe((HarveyVibe)currentVibeIndex);
+    specter.setLabel(vibeNames[currentVibeIndex]);
+    delay(50); // Harddebounce constraint
+  }
+
+  // Button B Clicked -> Previous Expression
+  if (btnB_State == LOW && lastBtnB_State == HIGH) {
+    currentVibeIndex = (currentVibeIndex - 1 < 0) ? 29 : currentVibeIndex - 1;
+    specter.setVibe((HarveyVibe)currentVibeIndex);
+    specter.setLabel(vibeNames[currentVibeIndex]);
+    delay(50); // Harddebounce constraint
+  }
+
+  // Save state tracking variables
+  lastBtnA_State = btnA_State;
+  lastBtnB_State = btnB_State;
+
+  // Run the core animation updates completely free of main delays
+  specter.update();
+}
+
+
 void loop() {
   //sensorvaluesdisplay();
   //moveservos();
+  expressionwithbuttongemini();
   specter.update();
-  static unsigned long lastChange = 0;
-  if (millis() - lastChange > 5000) {
-    lastChange = millis();
-    int randomFace = random(0, 13);
-    specter.setExpression((Expression)randomFace);
-  }
+  
 }
